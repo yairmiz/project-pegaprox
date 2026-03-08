@@ -1,7 +1,7 @@
 {
-    "version": "0.9.0.4",
-    "build": "2026.03.05",
-    "release_date": "2026-03-05",
+    "version": "0.9.1",
+    "build": "2026.03.08",
+    "release_date": "2026-03-08",
     "min_python": "3.8",
     "download_url": "https://github.com/PegaProx/project-pegaprox/releases/latest",
     "update_archive": "https://github.com/PegaProx/project-pegaprox/archive/refs/heads/main.tar.gz",
@@ -56,6 +56,7 @@
         "pegaprox/core/pbs.py",
         "pegaprox/core/v2p.py",
         "pegaprox/core/vmware.py",
+        "pegaprox/core/acme.py",
         "pegaprox/core/xcpng.py",
         "pegaprox/globals.py",
         "pegaprox/models/__init__.py",
@@ -131,6 +132,7 @@
         "static/js/xterm.min.js",
         "update.sh",
         "version.json",
+        "examples/nginx.conf",
         "web/Dev/_Normal_Users_No_Touchies_Devs_always_welcome",
         "web/Dev/build.sh",
         "web/Dev/patch.sh",
@@ -154,13 +156,13 @@
         "web/src/vm_modals.js"
     ],
     "changelog": [
-        "API token auto-creation for 2FA-safe REST auth (#110)",
-        "stored token for REST, password kept for SSH",
-        "token revoked on cluster delete, fallback on revoked token",
-        "cluster groups no longer reset when adding new cluster (#111)",
-        "OSD CRUSH tree flatten for correct display (#113)",
-        "corporate layout improvements (sidebar, storage, compact tables)",
-        "auth mode info card in cluster settings"
+        "XCP-ng / Xen hypervisor integration (Tech Preview)",
+        "XCP-ng VM power actions, VNC console, disk/network/CD-ROM management",
+        "XCP-ng node details, maintenance mode, storage uploads",
+        "ACME / Let's Encrypt auto-renewal for SSL certificates",
+        "Ceph RBD mirroring support with pool-level configuration",
+        "Nginx reverse proxy example configuration",
+        "offline operation + datastore uploads (#118, #119)"
     ],
     "breaking_changes": []
 }
