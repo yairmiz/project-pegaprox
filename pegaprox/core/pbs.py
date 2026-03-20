@@ -258,12 +258,16 @@ class PBSManager:
         """Get detailed status of a datastore (usage, GC status, counts)"""
         return self.api_get(f'/admin/datastore/{store}/status')
     
-    def get_snapshots(self, store: str, ns: str = None) -> dict:
-        """List all snapshots in a datastore.
+    def get_snapshots(self, store: str, ns: str = None, backup_type: str = None, backup_id: str = None) -> dict:
+        """List snapshots in a datastore, optionally filtered by group.
         LW: longer timeout because large datastores can have thousands of entries"""
         params = {}
         if ns:
             params['ns'] = ns
+        if backup_type:
+            params['backup-type'] = backup_type
+        if backup_id:
+            params['backup-id'] = backup_id
         return self.api_get(f'/admin/datastore/{store}/snapshots', params=params, timeout=60)
     
     def get_groups(self, store: str, ns: str = None) -> dict:

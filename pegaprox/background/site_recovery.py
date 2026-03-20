@@ -359,6 +359,10 @@ def execute_test_failover(plan_id):
 
     # keep status as 'testing' until cleanup
     _broadcast_progress(plan_id, "Test failover complete. Cleanup when ready.", 100)
+
+    ok = sum(1 for r in results.values() if r.get('success'))
+    log_audit('system', 'site_recovery.test_complete',
+              f"Test failover for '{plan['name']}': {ok}/{len(vms)} VMs cloned")
     logger.info(f"[SR] Test failover complete for '{plan['name']}': {len(test_vmids)} clones created")
 
 
@@ -412,6 +416,8 @@ def cleanup_test(plan_id):
     db.execute("UPDATE site_recovery_plans SET status = 'ready', updated_at = ? WHERE id = ?",
                (datetime.utcnow().isoformat(), plan_id))
 
+    log_audit('system', 'site_recovery.test_cleanup_complete',
+              f"Cleaned up {len(test_vmids)} test VMs for plan '{plan['name']}'")
     _broadcast_progress(plan_id, "Test cleanup complete", 100)
 
 

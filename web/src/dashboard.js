@@ -2019,7 +2019,7 @@
                                 <div className="bg-proxmox-card border border-proxmox-border rounded-xl p-4 space-y-4">
                                     <div><label className="text-xs text-gray-500 block mb-1">{t('planName')}</label><input value={settingsForm.name || ''} onChange={e => { setSettingsForm(f => ({...f, name: e.target.value})); setSettingsDirty(true); }} className="w-full bg-proxmox-dark border border-proxmox-border rounded-lg p-2 text-sm" /></div>
                                     <div className="flex items-center justify-between"><div><label className="text-sm font-medium">{t('autoFailover')}</label><p className="text-xs text-gray-500">{t('autoFailoverDesc')}</p></div>
-                                        <button onClick={() => { setSettingsForm(f => ({...f, auto_failover: !f.auto_failover})); setSettingsDirty(true); }} className={`w-11 h-6 rounded-full relative transition-colors ${settingsForm.auto_failover ? 'bg-proxmox-orange' : 'bg-gray-600'}`}><span className={`absolute top-[2px] left-[2px] w-5 h-5 bg-white rounded-full transition-transform ${settingsForm.auto_failover ? 'translate-x-5' : ''}`}></span></button>
+                                        <div className={`toggle-switch ${settingsForm.auto_failover ? 'active' : ''}`} onClick={() => { setSettingsForm(f => ({...f, auto_failover: !f.auto_failover})); setSettingsDirty(true); }} />
                                     </div>
                                     {settingsForm.auto_failover && <div><label className="text-xs text-gray-500 block mb-1">{t('failoverTimeout')} ({settingsForm.failover_timeout}s)</label><input type="range" min="30" max="600" step="10" value={settingsForm.failover_timeout || 120} onChange={e => { setSettingsForm(f => ({...f, failover_timeout: parseInt(e.target.value)})); setSettingsDirty(true); }} className="w-full" /></div>}
                                     <div><label className="text-xs text-gray-500 block mb-1">{t('preWebhook')}</label><input value={settingsForm.pre_failover_webhook || ''} onChange={e => { setSettingsForm(f => ({...f, pre_failover_webhook: e.target.value})); setSettingsDirty(true); }} placeholder="https://..." className="w-full bg-proxmox-dark border border-proxmox-border rounded-lg p-2 text-sm" /></div>
@@ -4512,13 +4512,17 @@
                 } catch (e) { console.warn('PBS datastores error:', e); }
             };
             
-            const fetchPBSSnapshots = async (pbsId, store) => {
+            const fetchPBSSnapshots = async (pbsId, store, backupType, backupId) => {
                 try {
-                    const resp = await authFetch(`${API_URL}/pbs/${pbsId}/datastores/${store}/snapshots`);
+                    // #143: pass group filter to avoid fetching all snapshots (can be thousands)
+                    let url = `${API_URL}/pbs/${pbsId}/datastores/${store}/snapshots`;
+                    if (backupType && backupId) {
+                        url += `?backup-type=${encodeURIComponent(backupType)}&backup-id=${encodeURIComponent(backupId)}`;
+                    }
+                    const resp = await authFetch(url);
                     if (resp && resp.ok) {
                         setPbsSnapshots(await resp.json());
                     } else if (resp) {
-                        // #143: show error instead of silently failing
                         const err = await resp.json().catch(() => ({}));
                         console.warn('PBS snapshots:', err.error || resp.status);
                         setPbsSnapshots([]);
@@ -4654,8 +4658,10 @@
                         addToast('Notes saved', 'success');
                         setPbsEditingNotes(null);
                         // Refresh data
-                        if (type === 'snapshot') fetchPBSSnapshots(selectedPBS.id, pbsSelectedStore);
-                        else fetchPBSGroups(selectedPBS.id, pbsSelectedStore);
+                        if (type === 'snapshot') {
+                            const [bt, bi] = pbsSelectedGroup ? pbsSelectedGroup.split('/') : [null, null];
+                            fetchPBSSnapshots(selectedPBS.id, pbsSelectedStore, bt, bi);
+                        } else fetchPBSGroups(selectedPBS.id, pbsSelectedStore);
                     } else {
                         addToast('Failed to save notes', 'error');
                     }
@@ -4677,7 +4683,8 @@
                     });
                     if (resp && resp.ok) {
                         addToast(`Snapshot ${newState ? 'protected' : 'unprotected'}`, 'success');
-                        fetchPBSSnapshots(selectedPBS.id, pbsSelectedStore);
+                        const [bt, bi] = pbsSelectedGroup ? pbsSelectedGroup.split('/') : [null, null];
+                        fetchPBSSnapshots(selectedPBS.id, pbsSelectedStore, bt, bi);
                     } else {
                         addToast('Failed to update protection', 'error');
                     }
@@ -4706,11 +4713,23 @@
             // Load PBS datastore detail when selected
             useEffect(() => {
                 if (selectedPBS && pbsSelectedStore) {
-                    fetchPBSSnapshots(selectedPBS.id, pbsSelectedStore);
                     fetchPBSGroups(selectedPBS.id, pbsSelectedStore);
                     fetchPBSNamespaces(selectedPBS.id, pbsSelectedStore);
+                    // don't fetch all snapshots here — wait for group selection
+                    setPbsSnapshots([]);
                 }
             }, [selectedPBS?.id, pbsSelectedStore]);
+
+            // #143: fetch snapshots when group is selected (with server-side filter)
+            useEffect(() => {
+                if (selectedPBS && pbsSelectedStore && pbsSelectedGroup) {
+                    const [btype, bid] = pbsSelectedGroup.split('/');
+                    fetchPBSSnapshots(selectedPBS.id, pbsSelectedStore, btype, bid);
+                } else if (selectedPBS && pbsSelectedStore && pbsSelectedGroup === null) {
+                    // "Show All" clicked — fetch without filter (can be slow on large stores)
+                    fetchPBSSnapshots(selectedPBS.id, pbsSelectedStore);
+                }
+            }, [selectedPBS?.id, pbsSelectedStore, pbsSelectedGroup]);
             
             // Initial PBS load
             useEffect(() => {
@@ -4811,7 +4830,8 @@
                         setTimeout(() => {
                             fetchPBSTasks(pbsId);
                             if (action === 'delete-snapshot' || action === 'prune') {
-                                fetchPBSSnapshots(pbsId, store);
+                                const [_bt, _bi] = pbsSelectedGroup ? pbsSelectedGroup.split('/') : [null, null];
+                                fetchPBSSnapshots(pbsId, store, _bt, _bi);
                                 fetchPBSGroups(pbsId, store);
                             }
                         }, 1000);
@@ -12425,7 +12445,7 @@
                                         clusterGroups={clusterGroups}
                                         topGuests={topGuests}
                                         onSelectCluster={(cluster) => { setSelectedGroup(null); setSelectedCluster(cluster); }}
-                                        onSelectVm={(cluster, vmid, node) => { setSelectedGroup(null); setSelectedCluster(cluster); setHighlightedVm({ vmid, node }); setTimeout(() => setHighlightedVm(null), 5000); }}
+                                        onSelectVm={(cluster, vmid, node, guest) => { setSelectedGroup(null); setSelectedCluster(cluster); setSelectedSidebarVm({...(guest || { vmid, node, type: 'qemu' }), _clusterId: cluster.id}); setSelectedSidebarNode(null); setActiveTab('resources'); setResourcesSubTab('management'); }}
                                         onOpenSettings={() => setShowGroupSettings(selectedGroup)}
                                         authFetch={authFetch}
                                         API_URL={API_URL}
@@ -12803,10 +12823,12 @@
                                         allClusterGuests={allClusterGuests}
                                         pbsServers={pbsServers}
                                         onSelectCluster={setSelectedCluster}
-                                        onSelectVm={(cluster, vmid, node) => {
+                                        onSelectVm={(cluster, vmid, node, guest) => {
                                             setSelectedCluster(cluster);
-                                            setHighlightedVm({ vmid, node });
-                                            setTimeout(() => setHighlightedVm(null), 5000);
+                                            setSelectedSidebarVm({...(guest || { vmid, node, type: 'qemu' }), _clusterId: cluster.id});
+                                            setSelectedSidebarNode(null);
+                                            setActiveTab('resources');
+                                            setResourcesSubTab('management');
                                         }}
                                     />
                                 )}

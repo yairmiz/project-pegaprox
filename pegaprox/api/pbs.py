@@ -266,7 +266,9 @@ def get_pbs_snapshots(pbs_id, store):
         return jsonify({'error': 'PBS server not found'}), 404
     mgr = pbs_managers[pbs_id]
     ns = request.args.get('ns', None)
-    result = mgr.get_snapshots(store, ns=ns)
+    backup_type = request.args.get('backup-type', None)
+    backup_id = request.args.get('backup-id', None)
+    result = mgr.get_snapshots(store, ns=ns, backup_type=backup_type, backup_id=backup_id)
     # #143: don't mask errors as empty arrays
     if 'error' in result:
         return jsonify({'error': result['error']}), result.get('status_code', 502)

@@ -2223,6 +2223,14 @@
                 return () => clearInterval(interval);
             }, [clusterId]);
 
+            // #183: auto-refresh update counts when rolling update finishes
+            useEffect(() => {
+                if (rollingUpdate && ['completed', 'failed', 'cancelled'].includes(rollingUpdate.status)) {
+                    localStorage.removeItem(`updateCheck_${clusterId}`);
+                    checkUpdates();
+                }
+            }, [rollingUpdate?.status]);
+
             const totalUpdates = updateStatus?.summary?.total_updates || 0;
             const nodesWithUpdates = updateStatus?.summary?.nodes_with_updates || 0;
             const nodesFailed = updateStatus?.summary?.nodes_failed || 0;

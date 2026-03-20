@@ -113,7 +113,7 @@ class UpdateTask:
         self.reboot = reboot
         self.started_at = datetime.now()
         self.status = 'starting'  # starting, updating, rebooting, waiting_online, completed, failed
-        self.phase = 'init'  # init, apt_update, apt_upgrade, reboot, wait_online
+        self.phase = 'init'  # init, apt_update, apt_dist_upgrade, reboot, wait_online
         self.output_lines = []
         self.error = None
         self.packages_upgraded = 0
@@ -1810,7 +1810,10 @@ class PegaProxManager:
                     if status == 'stopped':
                         # Task finished - check if successful
                         exit_status = task_status.get('exitstatus', '')
-                        return exit_status == 'OK'
+                        # #184: WARNINGS = task succeeded with non-fatal warnings (NUMA, local disks, etc.)
+                        if exit_status not in ('OK', 'WARNINGS'):
+                            self.logger.warning(f"Task {task_id} finished with exit status: {exit_status}")
+                        return exit_status in ('OK', 'WARNINGS')
                     
                 time.sleep(2)  # Poll every 2 seconds
                 
@@ -6573,7 +6576,7 @@ echo "AGENT_INSTALLED_OK"
             task.add_output("[OK] apt update successful / erfolgreich")
             
             # Phase 2: apt dist-upgrade
-            task.phase = 'apt_upgrade'
+            task.phase = 'apt_dist_upgrade'
             task.add_output("Running apt dist-upgrade...")
             
             exit_code, output, stderr = self._ssh_execute(

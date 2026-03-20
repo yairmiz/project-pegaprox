@@ -2826,9 +2826,18 @@ def generate_support_bundle():
             except Exception as e:
                 zf.writestr(f"{bundle_prefix}/users_list_error.txt", f"Failed: {str(e)}")
             
-            # 10. Application Log (last 1000 lines)
-            # Check multiple possible log locations
+            # 10. Application + Cluster Logs
+            # NS: redact sensitive data from all log output
+            def _redact_log(line):
+                line = re.sub(r'(password["\']?\s*[:=]\s*["\']?)[^"\'&\s]+', r'\1[REDACTED]', line, flags=re.IGNORECASE)
+                line = re.sub(r'(token["\']?\s*[:=]\s*["\']?)[^"\'&\s]+', r'\1[REDACTED]', line, flags=re.IGNORECASE)
+                line = re.sub(r'(secret["\']?\s*[:=]\s*["\']?)[^"\'&\s]+', r'\1[REDACTED]', line, flags=re.IGNORECASE)
+                # redact IPs: 192.168.1.100 -> 192.x.x.x
+                line = re.sub(r'(\d{1,3})\.\d{1,3}\.\d{1,3}\.\d{1,3}', r'\1.x.x.x', line)
+                return line
+
             possible_log_files = [
+                os.path.join(LOG_DIR, 'pegaprox.log'),
                 os.path.join(CONFIG_DIR, 'pegaprox.log'),
                 '/var/log/pegaprox.log',
                 'pegaprox.log',
@@ -2838,23 +2847,32 @@ def generate_support_bundle():
                 if os.path.exists(lf):
                     log_file = lf
                     break
-            
+
             if log_file:
                 try:
                     with open(log_file, 'r', encoding='utf-8', errors='replace') as f:
                         lines = f.readlines()
                         last_lines = lines[-1000:] if len(lines) > 1000 else lines
-                        redacted_lines = []
-                        for line in last_lines:
-                            line = re.sub(r'(password["\']?\s*[:=]\s*["\']?)[^"\'&\s]+', r'\1[REDACTED]', line, flags=re.IGNORECASE)
-                            line = re.sub(r'(token["\']?\s*[:=]\s*["\']?)[^"\'&\s]+', r'\1[REDACTED]', line, flags=re.IGNORECASE)
-                            line = re.sub(r'(secret["\']?\s*[:=]\s*["\']?)[^"\'&\s]+', r'\1[REDACTED]', line, flags=re.IGNORECASE)
-                            redacted_lines.append(line)
-                        zf.writestr(f"{bundle_prefix}/pegaprox.log", ''.join(redacted_lines))
+                        zf.writestr(f"{bundle_prefix}/pegaprox.log", ''.join(_redact_log(l) for l in last_lines))
                 except Exception as e:
                     zf.writestr(f"{bundle_prefix}/pegaprox_log_error.txt", f"Failed: {str(e)}")
             else:
                 zf.writestr(f"{bundle_prefix}/pegaprox.log", "Log file not found. Checked: " + ", ".join(possible_log_files))
+
+            # collect per-cluster logs from logs/ directory
+            import glob as _glob
+            cluster_logs = _glob.glob(os.path.join(LOG_DIR, '*.log'))
+            for cl_log in cluster_logs:
+                fname = os.path.basename(cl_log)
+                if fname == 'pegaprox.log':
+                    continue  # already handled above
+                try:
+                    with open(cl_log, 'r', encoding='utf-8', errors='replace') as f:
+                        lines = f.readlines()
+                        last_lines = lines[-500:] if len(lines) > 500 else lines
+                        zf.writestr(f"{bundle_prefix}/logs/{fname}", ''.join(_redact_log(l) for l in last_lines))
+                except Exception:
+                    pass
             
             # 11. Recent Tasks
             try:

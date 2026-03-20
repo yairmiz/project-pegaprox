@@ -279,6 +279,9 @@
                 if (activeTab === 'firewall') {
                     fetchFirewallData();
                 }
+                if (activeTab === 'backups') {
+                    fetchBackups();
+                }
             }, [activeTab]);
 
             const fetchPassthrough = async () => {

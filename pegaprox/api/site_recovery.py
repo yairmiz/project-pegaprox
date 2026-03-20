@@ -159,6 +159,10 @@ def update_plan(plan_id):
     db = get_db()
     db.execute(f"UPDATE site_recovery_plans SET {', '.join(updates)} WHERE id = ?", params)
 
+    usr = getattr(request, 'session', {}).get('user', 'system')
+    changed = [k for k in allowed if k in data]
+    log_audit(usr, 'site_recovery.plan_updated', f"Updated plan '{plan['name']}': {', '.join(changed)}")
+
     return jsonify({'message': 'Plan updated'})
 
 
@@ -226,6 +230,9 @@ def add_plan_vm(plan_id):
          data.get('boot_delay', 30), data.get('replication_job_id', ''),
          data.get('notes', '')))
 
+    usr = getattr(request, 'session', {}).get('user', 'system')
+    log_audit(usr, 'site_recovery.vm_added', f"VM {data['vmid']} added to plan '{plan['name']}'")
+
     return jsonify({'id': vm_id, 'message': 'VM added to plan'}), 201
 
 
@@ -249,6 +256,9 @@ def update_plan_vm(plan_id, vm_id):
         params.append(vm_id)
         db.execute(f"UPDATE site_recovery_vms SET {', '.join(updates)} WHERE id = ?", params)
 
+        usr = getattr(request, 'session', {}).get('user', 'system')
+        log_audit(usr, 'site_recovery.vm_updated', f"VM {row['vmid']} config changed in plan {plan_id}")
+
     return jsonify({'message': 'VM updated'})
 
 
@@ -256,7 +266,12 @@ def update_plan_vm(plan_id, vm_id):
 @require_auth(perms=['site_recovery.manage'])
 def remove_plan_vm(plan_id, vm_id):
     db = get_db()
+    row = db.query_one('SELECT vmid FROM site_recovery_vms WHERE id = ? AND plan_id = ?', (vm_id, plan_id))
     db.execute('DELETE FROM site_recovery_vms WHERE id = ? AND plan_id = ?', (vm_id, plan_id))
+
+    usr = getattr(request, 'session', {}).get('user', 'system')
+    log_audit(usr, 'site_recovery.vm_removed', f"VM {row['vmid'] if row else vm_id} removed from plan {plan_id}")
+
     return jsonify({'message': 'VM removed from plan'})
 
 
@@ -446,6 +461,9 @@ def cleanup_test_failover(plan_id):
     import gevent
     gevent.spawn(cleanup_test, plan_id)
 
+    usr = getattr(request, 'session', {}).get('user', 'system')
+    log_audit(usr, 'site_recovery.test_cleanup', f"Test cleanup started: {plan['name']}")
+
     return jsonify({'message': 'Test cleanup started'})
 
 
@@ -489,9 +507,14 @@ def cancel_action(plan_id):
         return jsonify({'error': 'Plan not found'}), 404
     if plan['status'] not in ('running', 'testing'):
         return jsonify({'error': 'No active action to cancel'}), 409
+    prev_status = plan['status']
     db = get_db()
     db.execute("UPDATE site_recovery_plans SET status = 'ready', updated_at = ? WHERE id = ?",
                (datetime.utcnow().isoformat(), plan_id))
+
+    usr = getattr(request, 'session', {}).get('user', 'system')
+    log_audit(usr, 'site_recovery.cancelled', f"Cancelled {prev_status} action on plan '{plan['name']}'")
+
     return jsonify({'message': 'Action cancelled'})
 
 

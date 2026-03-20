@@ -3580,7 +3580,7 @@
                                             const gc = clusters.find(c => c.id === guest.cluster_id);
                                             return (
                                                 <tr key={`${guest.cluster_id}-${guest.vmid}`} className="table-row-hover cursor-pointer"
-                                                    onClick={() => { if (gc && onSelectVm) onSelectVm(gc, guest.vmid, guest.node); }}>
+                                                    onClick={() => { if (gc && onSelectVm) onSelectVm(gc, guest.vmid, guest.node, guest); }}>
                                                     <td><Icons.Monitor className="w-3.5 h-3.5" style={{color: guest.type === 'qemu' ? '#49afd9' : '#a178d9'}} /></td>
                                                     <td><span style={{fontWeight: 500}}>{guest.name || `VM ${guest.vmid}`}</span> <span style={{color: '#728b9a', fontSize: '11px'}}>#{guest.vmid}</span></td>
                                                     <td>{guest.cluster_name}</td>
@@ -3801,7 +3801,7 @@
                                                     <tr
                                                         key={`${guest.cluster_id}-${guest.vmid}`}
                                                         className="hover:bg-proxmox-hover/50 transition-colors cursor-pointer group"
-                                                        onClick={() => { if (guestCluster && onSelectVm) onSelectVm(guestCluster, guest.vmid, guest.node); }}
+                                                        onClick={() => { if (guestCluster && onSelectVm) onSelectVm(guestCluster, guest.vmid, guest.node, guest); }}
                                                         title={t('clickToOpenVm') || 'Click to open VM'}
                                                     >
                                                         <td className="px-4 py-3">
@@ -4369,7 +4369,7 @@
                                             const gc = clusters.find(c => c.id === guest.cluster_id);
                                             return (
                                                 <tr key={`${guest.cluster_id}-${guest.vmid}`} className="table-row-hover cursor-pointer"
-                                                    onClick={() => { if (gc && onSelectVm) onSelectVm(gc, guest.vmid, guest.node); }}>
+                                                    onClick={() => { if (gc && onSelectVm) onSelectVm(gc, guest.vmid, guest.node, guest); }}>
                                                     <td>
                                                         <Icons.Monitor className="w-3.5 h-3.5" style={{color: guest.type === 'qemu' ? '#49afd9' : '#a178d9'}} />
                                                     </td>
@@ -4541,7 +4541,7 @@
                                                                                 style={{':hover': {background: 'rgba(255,255,255,0.03)'}}}
                                                                                 onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
                                                                                 onMouseOut={e => e.currentTarget.style.background = 'transparent'}
-                                                                                onClick={() => onSelectVm && onSelectVm(cluster, g.vmid, g.node)}
+                                                                                onClick={() => onSelectVm && onSelectVm(cluster, g.vmid, g.node, g)}
                                                                             >
                                                                                 <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{background: g.status === 'running' ? '#60b515' : 'var(--corp-text-muted)'}} />
                                                                                 {g.type === 'qemu' ? <Icons.VM /> : <Icons.Container />}
@@ -4767,7 +4767,7 @@
                                                     className="hover:bg-proxmox-hover/50 transition-colors cursor-pointer group"
                                                     onClick={() => {
                                                         if (guestCluster && onSelectVm) {
-                                                            onSelectVm(guestCluster, guest.vmid, guest.node);
+                                                            onSelectVm(guestCluster, guest.vmid, guest.node, guest);
                                                         }
                                                     }}
                                                     title={t('clickToOpenVm') || 'Click to open VM'}
