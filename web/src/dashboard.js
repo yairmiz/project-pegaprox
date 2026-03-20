@@ -13587,8 +13587,8 @@
                         </div>
                     )}
 
-                    {/* Sponsor Footer - hidden in corporate (status bar replaces it) */}
-                    <footer className={`border-t border-proxmox-border bg-proxmox-dark/50 mt-8 ${isCorporate ? 'hidden' : ''}`}>
+                    {/* Sponsor Footer */}
+                    <footer className="border-t border-proxmox-border bg-proxmox-dark/50 mt-8">
                         <div className="max-w-[800px] mx-auto px-6 py-6">
                             <div className="text-center mb-4">
                                 <p className="text-sm text-gray-400">
