@@ -227,14 +227,15 @@ def ha_handler():
         if err:
             return err
 
+        # Proxmox HA endpoints expect form-encoded data; numeric values must be strings.
         payload = {'sid': validated_sid, 'state': state}
         if max_restart is not None:
-            payload['max_restart'] = max_restart
+            payload['max_restart'] = str(max_restart)
         if max_relocate is not None:
-            payload['max_relocate'] = max_relocate
+            payload['max_relocate'] = str(max_relocate)
 
         try:
-            r = manager._api_post(_px_url(manager, '/cluster/ha/resources'), json=payload)
+            r = manager._api_post(_px_url(manager, '/cluster/ha/resources'), data=payload)
             if r.status_code != 200:
                 detail = _parse_proxmox_error(r)
                 return jsonify({'error': f'Proxmox returned {r.status_code}', 'detail': detail}), 502
@@ -285,16 +286,17 @@ def ha_handler():
         if err:
             return err
 
+        # Proxmox HA endpoints expect form-encoded data; numeric values must be strings.
         if max_restart is not None:
-            payload['max_restart'] = max_restart
+            payload['max_restart'] = str(max_restart)
         if max_relocate is not None:
-            payload['max_relocate'] = max_relocate
+            payload['max_relocate'] = str(max_relocate)
 
         if not payload:
             return jsonify({'error': 'No fields to update (provide state, max_restart, or max_relocate)'}), 400
 
         try:
-            r = manager._api_put(_px_url(manager, f'/cluster/ha/resources/{validated_sid}'), json=payload)
+            r = manager._api_put(_px_url(manager, f'/cluster/ha/resources/{validated_sid}'), data=payload)
             if r.status_code != 200:
                 detail = _parse_proxmox_error(r)
                 return jsonify({'error': f'Proxmox returned {r.status_code}', 'detail': detail}), 502
